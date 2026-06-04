@@ -109,7 +109,7 @@ private:
     void drain_frames();
     void handle_frame(std::uint32_t msg_type, ByteView payload);
     void handle_internal(std::uint32_t msg_type, const ProtoMessage& msg);
-    void send_hello();
+    void send_hello() const;
     void finish_connect(std::error_code ec);
     void fail(std::error_code ec, const std::string& what);
 

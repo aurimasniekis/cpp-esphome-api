@@ -3,6 +3,7 @@ include(GoogleTest)
 set(_esphome_api_test_sources
     test_varint.cpp
     test_message_registry.cpp
+    test_wire_golden.cpp
     test_plaintext_frame.cpp
     test_connection_fsm.cpp
     test_sync_client.cpp

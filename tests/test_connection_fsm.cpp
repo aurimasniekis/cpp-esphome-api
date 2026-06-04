@@ -16,8 +16,6 @@
 #include <utility>
 #include <vector>
 
-#include <google/protobuf/message.h>
-
 using esphome::api::ByteBuffer;
 using esphome::api::ByteView;
 using esphome::api::Connection;

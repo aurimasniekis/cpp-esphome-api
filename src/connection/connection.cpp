@@ -7,8 +7,6 @@
 
 #include <utility>
 
-#include <google/protobuf/message.h>
-
 namespace esphome::api {
 
 namespace {
@@ -111,7 +109,7 @@ void Connection::on_connected_transport(const std::error_code ec) {
     }
 }
 
-void Connection::send_hello() {
+void Connection::send_hello() const {
     proto::HelloRequest hello;
     hello.set_client_info(options_.client_info);
     hello.set_api_version_major(client_api_version_major);
@@ -167,7 +165,7 @@ void Connection::handle_frame(const std::uint32_t msg_type, const ByteView paylo
         raw_handler_(msg_type, payload);
     }
 
-    const std::unique_ptr<ProtoMessage> msg = MessageRegistry::instance().create(msg_type);
+    const std::unique_ptr<ProtoMessage> msg = MessageRegistry::create(msg_type);
     if (!msg) {
         return;  // unknown id — already surfaced via raw_handler_, if any
     }

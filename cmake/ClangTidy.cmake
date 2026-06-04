@@ -3,13 +3,6 @@ include_guard(GLOBAL)
 # esphome_api_enable_clang_tidy(<target>)
 #
 # Applies clang-tidy to <target> when ESPHOME_API_ENABLE_CLANG_TIDY is ON.
-#
-# Why per-target rather than the global CMAKE_CXX_CLANG_TIDY?  Setting the
-# variable globally causes every FetchContent'd third-party dependency
-# (protobuf, abseil, libsodium, ...) to inherit the clang-tidy command, and a
-# great many of them fail under our `.clang-tidy` config — they're not our code
-# to fix. Scoping the property to our own targets keeps the linter focused on
-# esphome-api-client code. Generated protobuf sources are excluded by callers.
 
 if(ESPHOME_API_ENABLE_CLANG_TIDY)
     find_program(ESPHOME_API_CLANG_TIDY_EXE NAMES clang-tidy REQUIRED)

@@ -1,90 +1,90 @@
 include_guard(GLOBAL)
 
-# Proto pipeline:
-#   1. protobuf_generate() compiles proto/api.proto + proto/api_options.proto to
-#      C++ into ${ESPHOME_API_GENERATED_DIR}/proto, attached to the static lib
-#      `esphome_api_proto`.
-#   2. A host tool `esphome_api_gen_message_ids` links that lib and reflects over
-#      the descriptors to emit message_id.hpp (the (id) -> name enum).
+# Proto pipeline (self-contained — no protoc, no libprotobuf, no abseil):
 #
-# The generated translation unit is large; it is NOT subjected to our strict
-# warnings / clang-tidy. Its include dir is exported SYSTEM so consumers that
-# pull in api.pb.h do not inherit protobuf's own warnings either.
+#   1. Build the host tool `esphome_api_protogen` from tools/protogen/*.cpp.
+#      It links only the C++ stdlib.
+#   2. Run it once on proto/api.proto + proto/api_options.proto to emit, in one
+#      shot, into ${ESPHOME_API_GENERATED_DIR}:
+#        include/esphome/api/proto/{api_enums.hpp, api_messages.hpp,
+#                                   message_id.hpp, api.pb.h}
+#        src/{api_messages.cpp, api_registry.cpp}
+#   3. Compile the generated sources into the static lib `esphome_api_proto`,
+#      together with the committed runtime codec headers (proto/wire.hpp,
+#      proto/proto_message.hpp).
+#
+# Cross-compile note: protogen is a HOST tool. The current CI matrix is not
+# cross-compiled, so building it for the host toolchain is correct. A future
+# cross build would need a host-built protogen (e.g. via a separate host
+# toolchain export); flagged here intentionally.
 
-find_package(Protobuf REQUIRED)
+# ---------------------------------------------------------------------------
+# 1. Host generator tool.
+# ---------------------------------------------------------------------------
+add_executable(esphome_api_protogen
+    tools/protogen/lexer.cpp
+    tools/protogen/parser.cpp
+    tools/protogen/emit_enums.cpp
+    tools/protogen/emit_messages.cpp
+    tools/protogen/emit_registry.cpp
+    tools/protogen/main.cpp
+)
+target_compile_features(esphome_api_protogen PRIVATE cxx_std_17)
+# The generator is a build-time tool; keep our strict warnings off it.
 
-set(_esphome_api_proto_out "${ESPHOME_API_GENERATED_DIR}/proto")
-file(MAKE_DIRECTORY "${_esphome_api_proto_out}")
+# ---------------------------------------------------------------------------
+# 2. Run the generator.
+# ---------------------------------------------------------------------------
+set(_esphome_api_gen_inc "${ESPHOME_API_GENERATED_DIR}/include/esphome/api/proto")
+set(_esphome_api_gen_src "${ESPHOME_API_GENERATED_DIR}/src")
 
-# Locate the well-known-types directory (for google/protobuf/descriptor.proto).
-if(DEFINED Protobuf_INCLUDE_DIRS)
-    set(_esphome_api_wkt_dir "${Protobuf_INCLUDE_DIRS}")
-elseif(DEFINED protobuf_SOURCE_DIR)
-    set(_esphome_api_wkt_dir "${protobuf_SOURCE_DIR}/src")
-else()
-    get_target_property(_esphome_api_wkt_dir protobuf::libprotobuf
-        INTERFACE_INCLUDE_DIRECTORIES)
-endif()
-
-add_library(esphome_api_proto STATIC)
-
-# Invoke protoc directly rather than via protobuf_generate(). The protos are
-# compiled by basename with `-I proto`, so each file's canonical name is
-# "api.proto" / "api_options.proto" — matching the `import "api_options.proto"`
-# in api.proto and the `${out}` include directory below. This is deterministic
-# across protobuf / CMake versions: some protobuf_generate() variants found in
-# clean environments canonicalize relative to the source root instead
-# ("proto/api_options.proto"), which mismatches the import and miscompiles the
-# generated code.
-if(TARGET protobuf::protoc)
-    set(_esphome_api_protoc protobuf::protoc)
-else()
-    set(_esphome_api_protoc "${Protobuf_PROTOC_EXECUTABLE}")
-endif()
-
-set(_esphome_api_proto_srcs
-    "${_esphome_api_proto_out}/api.pb.cc"
-    "${_esphome_api_proto_out}/api_options.pb.cc")
+set(_esphome_api_generated_outputs
+    "${_esphome_api_gen_inc}/api_enums.hpp"
+    "${_esphome_api_gen_inc}/api_messages.hpp"
+    "${_esphome_api_gen_inc}/message_id.hpp"
+    "${_esphome_api_gen_inc}/api.pb.h"
+    "${_esphome_api_gen_src}/api_messages.cpp"
+    "${_esphome_api_gen_src}/api_registry.cpp")
 
 add_custom_command(
-    OUTPUT
-        ${_esphome_api_proto_srcs}
-        "${_esphome_api_proto_out}/api.pb.h"
-        "${_esphome_api_proto_out}/api_options.pb.h"
-    COMMAND "${_esphome_api_protoc}"
-            "--cpp_out=${_esphome_api_proto_out}"
-            "-I${CMAKE_CURRENT_SOURCE_DIR}/proto"
-            "-I${_esphome_api_wkt_dir}"
-            api.proto api_options.proto
-    DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/proto/api.proto"
-        "${CMAKE_CURRENT_SOURCE_DIR}/proto/api_options.proto"
-        ${_esphome_api_protoc}
-    COMMENT "Generating protobuf C++ sources (api.proto, api_options.proto)"
+    OUTPUT ${_esphome_api_generated_outputs}
+    COMMAND "$<TARGET_FILE:esphome_api_protogen>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/proto/api.proto"
+            "${CMAKE_CURRENT_SOURCE_DIR}/proto/api_options.proto"
+            "${ESPHOME_API_GENERATED_DIR}"
+    DEPENDS esphome_api_protogen
+            "${CMAKE_CURRENT_SOURCE_DIR}/proto/api.proto"
+            "${CMAKE_CURRENT_SOURCE_DIR}/proto/api_options.proto"
+    COMMENT "Generating ESPHome API message classes + registry (protogen)"
     VERBATIM
 )
+add_custom_target(esphome_api_generate DEPENDS ${_esphome_api_generated_outputs})
 
-target_sources(esphome_api_proto PRIVATE ${_esphome_api_proto_srcs})
-target_link_libraries(esphome_api_proto PUBLIC protobuf::libprotobuf)
-target_include_directories(esphome_api_proto SYSTEM PUBLIC "${_esphome_api_proto_out}")
+# message_id.hpp is consumed by several library TUs; expose a target the library
+# can depend on so the generator runs before they compile.
+add_custom_target(esphome_api_message_id DEPENDS
+    "${_esphome_api_gen_inc}/message_id.hpp")
+add_dependencies(esphome_api_message_id esphome_api_generate)
+
+# ---------------------------------------------------------------------------
+# 3. Compile the generated sources into the proto static lib.
+#
+# The generated TU is large and follows protoc's accessor patterns; it is NOT
+# subjected to our strict warnings / clang-tidy. Its include dir is exported
+# SYSTEM so consumers that pull in api.pb.h do not inherit any warnings either.
+# ---------------------------------------------------------------------------
+add_library(esphome_api_proto STATIC
+    "${_esphome_api_gen_src}/api_messages.cpp"
+    "${_esphome_api_gen_src}/api_registry.cpp")
+add_dependencies(esphome_api_proto esphome_api_generate)
+
+# Public include: generated/include holds <esphome/api/proto/...> headers; the
+# proto-subdir entry resolves the bare `#include "api.pb.h"` in consumer TUs.
+target_include_directories(esphome_api_proto SYSTEM PUBLIC
+    "${ESPHOME_API_GENERATED_DIR}/include"
+    "${_esphome_api_gen_inc}")
+# The committed runtime codec (wire.hpp / proto_message.hpp) lives in the normal
+# source include tree.
+target_include_directories(esphome_api_proto SYSTEM PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set_target_properties(esphome_api_proto PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
-# ---------------------------------------------------------------------------
-# message_id.hpp generator (host tool)
-# ---------------------------------------------------------------------------
-add_executable(esphome_api_gen_message_ids tools/gen_message_ids.cpp)
-target_link_libraries(esphome_api_gen_message_ids PRIVATE esphome_api_proto)
-
-set(ESPHOME_API_MESSAGE_ID_HPP
-    "${ESPHOME_API_GENERATED_DIR}/include/esphome/api/proto/message_id.hpp")
-
-add_custom_command(
-    OUTPUT  "${ESPHOME_API_MESSAGE_ID_HPP}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-            "${ESPHOME_API_GENERATED_DIR}/include/esphome/api/proto"
-    COMMAND "$<TARGET_FILE:esphome_api_gen_message_ids>" "${ESPHOME_API_MESSAGE_ID_HPP}"
-    DEPENDS esphome_api_gen_message_ids
-    COMMENT "Generating esphome/api/proto/message_id.hpp from descriptors"
-    VERBATIM
-)
-add_custom_target(esphome_api_message_id DEPENDS "${ESPHOME_API_MESSAGE_ID_HPP}")

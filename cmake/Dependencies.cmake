@@ -5,62 +5,16 @@ include(FetchContent)
 # package is available it is preferred (FIND_PACKAGE_ARGS) so that install/export
 # can be re-enabled and clean-build time stays low.
 #
-#   protobuf  -> protobuf::libprotoc + Protocol Buffers runtime (pulls abseil)
 #   asio      -> header-only; hand-made INTERFACE target esphome_api_asio
 #   libsodium -> target `sodium` (gated by ESPHOME_API_WITH_NOISE)
 #   gtest     -> GTest::gtest_main (gated by ESPHOME_API_BUILD_TESTS)
-
-# ---------------------------------------------------------------------------
-# 1. Abseil — protobuf's mandatory dependency. Prefer a system install;
-#    otherwise fetch the version that pairs with protobuf v29.3.
 #
-#    This MUST be made available before protobuf: the protobuf release tarball
-#    does NOT bundle its `third_party/abseil-cpp` submodule, so the default
-#    `module` provider fails with "third_party/abseil-cpp does not contain a
-#    CMakeLists.txt file". By providing abseil here and using protobuf's
-#    `package` provider below, the from-source protobuf build is self-contained.
-#    FetchContent_MakeAvailable registers a find_package redirect (CMake >= 3.24)
-#    so protobuf's `find_package(absl)` resolves to this copy when fetched.
-# ---------------------------------------------------------------------------
-set(ABSL_PROPAGATE_CXX_STD ON CACHE INTERNAL "")
-set(ABSL_ENABLE_INSTALL    ON CACHE INTERNAL "")
-set(ABSL_BUILD_TESTING     OFF CACHE INTERNAL "")
-FetchContent_Declare(
-    absl
-    URL      https://github.com/abseil/abseil-cpp/archive/refs/tags/20240722.0.tar.gz
-    URL_HASH SHA256=f50e5ac311a81382da7fa75b97310e4b9006474f9560ac46f54a9967f07d4ae3
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    FIND_PACKAGE_ARGS NAMES absl
-)
-FetchContent_MakeAvailable(absl)
+# The proto layer is self-contained (see cmake/ProtoGen.cmake): a build-time C++
+# generator emits the message classes + a static id<->type table, so there is no
+# protobuf / abseil dependency to fetch or link.
 
 # ---------------------------------------------------------------------------
-# 2. Protocol Buffers. Prefer a system install (FIND_PACKAGE_ARGS Protobuf);
-#    fall back to building the pinned source release against the abseil made
-#    available above (`package` provider) rather than the absent submodule.
-# ---------------------------------------------------------------------------
-set(protobuf_BUILD_TESTS      OFF CACHE INTERNAL "")
-set(protobuf_BUILD_EXAMPLES   OFF CACHE INTERNAL "")
-set(protobuf_BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
-set(protobuf_ABSL_PROVIDER    "package" CACHE STRING "")
-set(protobuf_INSTALL          OFF CACHE INTERNAL "")
-FetchContent_Declare(
-    protobuf
-    URL      https://github.com/protocolbuffers/protobuf/archive/refs/tags/v29.3.tar.gz
-    URL_HASH SHA256=008a11cc56f9b96679b4c285fd05f46d317d685be3ab524b2a310be0fbad987e
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    FIND_PACKAGE_ARGS NAMES Protobuf protobuf
-)
-FetchContent_MakeAvailable(protobuf)
-
-# When protobuf was built from source the protoc target lives in this build
-# tree; remember whether a fetched copy is in play (used to disable install).
-if(DEFINED protobuf_SOURCE_DIR)
-    set(ESPHOME_API_PROTOBUF_FETCHED TRUE CACHE INTERNAL "")
-endif()
-
-# ---------------------------------------------------------------------------
-# 2. Asio (standalone). No CMake package — build a hand-made INTERFACE target.
+# 1. Asio (standalone). No CMake package — build a hand-made INTERFACE target.
 #    Kept PRIVATE to the library so consumers never need ASIO_STANDALONE.
 # ---------------------------------------------------------------------------
 FetchContent_Declare(

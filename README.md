@@ -135,11 +135,6 @@ find_package(esphome-api-client CONFIG REQUIRED)
 target_link_libraries(my_app PRIVATE esphome::api)
 ```
 
-> The package is only installable/exportable when its dependencies (Protocol Buffers / Abseil /
-> libsodium) come from the system. If any of them had to be fetched and built from source, install
-> rules are disabled automatically, because a source-built dependency cannot be re-exported. Provide
-> a system protobuf + libsodium to enable `make install`.
-
 ---
 
 ## Requirements
@@ -147,8 +142,8 @@ target_link_libraries(my_app PRIVATE esphome::api)
 - **C++ standard:** C++17 (`cxx_std_17` is a public compile feature of the target).
 - **Build system:** CMake ≥ 3.25.
 - **Threads:** the system threads library (linked publicly).
-- **Protocol Buffers:** used from the system if available, otherwise built from source as part of the
-  build.
+- **Proto layer:** self-contained — a build-time C++ generator (`tools/protogen`) parses the vendored
+  `proto/*.proto` and emits the message classes, enums, and id↔type table.
 - **Asio** and **libsodium:** fetched automatically via CMake `FetchContent`. They are *private*
   dependencies — they never appear in the public headers, so consumers do not need to find or link
   them.
@@ -480,14 +475,16 @@ Seven layers, each depending only on those below:
 
 1. **Transport + crypto** — Asio `TcpTransport`; pure libsodium-backed Noise primitives / handshake.
 2. **Frame layer** — `PlaintextFrameHelper` / `NoiseFrameHelper` (reassembly + framing).
-3. **Codec + registry** — `MessageRegistry` maps message id ↔ protobuf type via runtime reflection.
+3. **Codec + registry** — a hand-rolled proto3 wire codec; `MessageRegistry` maps message id ↔ type via a static generated table (no runtime reflection).
 4. **Connection** — explicit state machine: handshake, dispatch, keepalive.
 5. **Typed model** — `Client`, `DeviceInfo`, `EntityStore`, per-domain entities + commands.
 6. **Subsystem managers** — logs, HA services, Bluetooth/voice/Z-Wave/serial proxies.
 7. **Sync facade** — `SyncClient` pumps the event loop until each blocking call resolves.
 
-The protobuf schema (`proto/api.proto`) is vendored from ESPHome and compiled at build time; a small
-C++ host tool generates the `MessageId` enum from the descriptors (no Python in the build).
+The proto schema (`proto/api.proto`) is vendored from ESPHome. At build time the `tools/protogen` C++
+generator parses it and emits the message classes, enums, the `MessageId` enum, and the id↔type
+registry table — a self-contained replacement for `protoc` + `libprotobuf`. The generated wire format is byte-for-byte identical to protoc's, verified by a golden
+test (`tests/test_wire_golden.cpp`) against captured protoc output.
 
 ---
 

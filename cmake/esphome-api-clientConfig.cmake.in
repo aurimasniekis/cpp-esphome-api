@@ -2,7 +2,6 @@
 
 include(CMakeFindDependencyMacro)
 
-find_dependency(Protobuf)
 find_dependency(Threads)
 @ESPHOME_API_CONFIG_NOISE_DEP@
 

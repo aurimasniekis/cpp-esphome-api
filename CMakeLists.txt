@@ -183,12 +183,13 @@ endif()
 
 # ---------------------------------------------------------------------------
 # Install / export — only possible when no dependency was fetched from source.
+# The proto layer is self-contained now, so only a fetched libsodium (Noise)
+# blocks export.
 # ---------------------------------------------------------------------------
-if(ESPHOME_API_INSTALL AND (DEFINED protobuf_SOURCE_DIR OR DEFINED absl_SOURCE_DIR
-        OR DEFINED Sodium_SOURCE_DIR OR DEFINED sodium_SOURCE_DIR))
+if(ESPHOME_API_INSTALL AND (DEFINED Sodium_SOURCE_DIR OR DEFINED sodium_SOURCE_DIR))
     message(STATUS
-        "esphome-api-client: ESPHOME_API_INSTALL disabled — a dependency was fetched "
-        "from source and cannot be re-exported. Provide system protobuf / libsodium "
+        "esphome-api-client: ESPHOME_API_INSTALL disabled — libsodium was fetched "
+        "from source and cannot be re-exported. Provide system libsodium "
         "(find_package) to re-enable install rules.")
     set(ESPHOME_API_INSTALL OFF)
 endif()

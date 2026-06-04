@@ -7,33 +7,16 @@
 
 #include <string>
 
-#include <google/protobuf/descriptor.h>
-#include <google/protobuf/message.h>
-
 namespace esphome::api {
 
 namespace {
-std::uint32_t reflect_u32(const ProtoMessage& msg, const char* field) {
-    const auto* fd = msg.GetDescriptor()->FindFieldByName(field);
-    if (fd == nullptr)
-        return 0;
-    return msg.GetReflection()->GetUInt32(msg, fd);
-}
-std::string reflect_str(const ProtoMessage& msg, const char* field) {
-    const auto* fd = msg.GetDescriptor()->FindFieldByName(field);
-    if (fd == nullptr)
-        return {};
-    return msg.GetReflection()->GetString(msg, fd);
-}
 std::shared_ptr<ProtoMessage> clone(const ProtoMessage& msg) {
-    std::shared_ptr<ProtoMessage> copy(msg.New());
-    copy->CopyFrom(msg);
-    return copy;
+    return std::shared_ptr<ProtoMessage>(msg.clone());
 }
 }  // namespace
 
 bool EntityStore::ingest(const ProtoMessage& msg) {
-    const std::string name(msg.GetDescriptor()->name());
+    const std::string name(msg.message_name());
     const bool is_list = name.rfind("ListEntities", 0) == 0 && name.size() > 8 &&
                          name.substr(name.size() - 8) == "Response" &&
                          name != "ListEntitiesDoneResponse" &&
@@ -42,22 +25,28 @@ bool EntityStore::ingest(const ProtoMessage& msg) {
     const bool is_state =
         is_event || (name.size() > 13 && name.substr(name.size() - 13) == "StateResponse");
     if (is_list) {
+        const auto* info = dynamic_cast<const InfoResponseBase*>(&msg);
+        if (info == nullptr)
+            return false;
         const std::string token = name.substr(12, name.size() - 12 - 8);
-        const std::uint32_t key = reflect_u32(msg, "key");
+        const std::uint32_t key = info->key();
         StoredEntity& e = entities_[key];
         e.type = entity_type_from_token(token);
         e.key = key;
-        e.name = reflect_str(msg, "name");
-        e.object_id = reflect_str(msg, "object_id");
+        e.name = info->name();
+        e.object_id = info->object_id();
         if (e.object_id.empty())
             e.object_id = object_id_from_name(e.name);
         e.info = clone(msg);
         return true;
     }
     if (is_state) {
+        const auto* state = dynamic_cast<const StateResponseBase*>(&msg);
+        if (state == nullptr)
+            return false;
         const std::string token = is_event ? "Event" : name.substr(0, name.size() - 13);
         const EntityType type = entity_type_from_token(token);
-        const std::uint32_t key = reflect_u32(msg, "key");
+        const std::uint32_t key = state->key();
         StoredEntity& e = entities_[key];
         if (e.type == EntityType::Unknown)
             e.type = type;

@@ -1,20 +1,19 @@
 #pragma once
 
 /// @file
-/// @brief Lightweight forward declarations for the protobuf layer, so public
-///        headers can refer to messages without pulling in the large
-///        generated `api.pb.h`.
+/// @brief Brings the lightweight ProtoMessage base into scope for public
+///        headers, without pulling in the large generated `api.pb.h`.
+///
+/// Historically this declared `esphome::api::ProtoMessage` as an alias for
+/// `google::protobuf::Message`. After the protoc -> protogen migration the base
+/// is a self-contained class defined in proto_message.hpp; this header is kept
+/// so the many includes of it stay valid.
 
-namespace google::protobuf {
-class Message;
-class Descriptor;
-}  // namespace google::protobuf
+#include <esphome/api/proto/proto_message.hpp>
 
 namespace esphome::api {
 
-/// The protobuf base class every generated ESPHome message derives from. The
-/// concrete types live in namespace `esphome::api::proto` (see `api.pb.h`),
-/// reachable through the raw escape hatch on the client.
-using ProtoMessage = google::protobuf::Message;
+// `ProtoMessage` is defined in proto_message.hpp (included above). The concrete
+// message types live in namespace `esphome::api::proto` (see `api.pb.h`).
 
 }  // namespace esphome::api

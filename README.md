@@ -103,7 +103,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 FetchContent_Declare(
     esphome-api
-    URL      https://github.com/aurimasniekis/cpp-esphome-api/archive/refs/tags/v0.1.0.tar.gz
+    URL      https://github.com/aurimasniekis/cpp-esphome-api/archive/refs/tags/v0.2.0.tar.gz
     URL_HASH SHA256=0000000000000000000000000000000000000000000000000000000000000000
 )
 FetchContent_MakeAvailable(esphome-api)

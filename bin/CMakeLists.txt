@@ -53,6 +53,11 @@ esphome_api_set_warnings(esphome-cli PRIVATE)
 # let that third-party-header warning fail the CLI build.
 target_compile_options(esphome-cli PRIVATE
     $<$<CXX_COMPILER_ID:GNU>:-Wno-error=null-dereference>)
+# MSVC flags the standard std::getenv (used to read ESPHOME_CLI_* env vars) as
+# C4996 "deprecated/unsafe"; under /WX that fails the build. The call is correct
+# and portable, so silence the CRT secure-function deprecation for this target.
+target_compile_definitions(esphome-cli PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
 esphome_api_enable_sanitizers(esphome-cli)
 esphome_api_enable_coverage(esphome-cli)
 esphome_api_enable_clang_tidy(esphome-cli)

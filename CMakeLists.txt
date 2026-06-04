@@ -35,6 +35,10 @@ option(ESPHOME_API_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ${PROJ
 option(ESPHOME_API_WITH_NOISE       "Enable Noise (encrypted) transport (self-contained in-tree crypto)" ON)
 option(ESPHOME_API_BUILD_SHARED     "Build esphome-api-client as a shared library" OFF)
 option(ESPHOME_API_BUILD_CLI        "Build the esphome-cli command-line tool" ${PROJECT_IS_TOP_LEVEL})
+# Install rules for the esphome-cli executable. Decoupled from ESPHOME_API_INSTALL
+# (which governs the library + headers + CMake package export) so the .deb/.rpm
+# packaging can ship just the CLI binary without the library dev files.
+option(ESPHOME_API_INSTALL_CLI      "Generate install rules for the esphome-cli executable" ${ESPHOME_API_INSTALL})
 
 include(CompilerWarnings)
 include(Sanitizers)
@@ -268,4 +272,12 @@ if(ESPHOME_API_INSTALL)
         "${CMAKE_CURRENT_BINARY_DIR}/esphome-api-clientConfigVersion.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/esphome-api-client
     )
+endif()
+
+# ---------------------------------------------------------------------------
+# CPack — .deb / .rpm packaging for the CLI. Must come after all install()
+# rules. Only the top-level project drives packaging.
+# ---------------------------------------------------------------------------
+if(PROJECT_IS_TOP_LEVEL)
+    include(Packaging)
 endif()

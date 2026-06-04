@@ -4,6 +4,9 @@ build-*/
 out/
 cmake-build-*/
 
+# Packaging output (CPack: .deb / .rpm staging + artifacts)
+dist/
+
 # CMake artifacts
 CMakeCache.txt
 CMakeFiles/

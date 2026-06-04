@@ -30,6 +30,21 @@ Output can be human-readable **text** (default), **JSON**, or **YAML**.
 brew install aurimasniekis/tap/esphome-cli
 ```
 
+### Linux packages (.deb / .rpm)
+
+Each [release](https://github.com/aurimasniekis/cpp-esphome-api/releases) attaches `.deb` and `.rpm`
+packages for `x86_64` and `arm64`. Download the one for your distro and architecture, then:
+
+```sh
+# Debian / Ubuntu
+sudo apt install ./esphome-cli_<version>_amd64.deb
+
+# Fedora / RHEL / openSUSE
+sudo rpm -i esphome-cli-<version>-1.x86_64.rpm
+```
+
+The package installs `esphome-cli` to `/usr/bin`.
+
 ### Docker
 
 The image is published as `aurimasniekis/esphome-cli`. Because discovery and device traffic need LAN

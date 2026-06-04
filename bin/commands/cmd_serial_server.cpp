@@ -152,7 +152,7 @@ int serial_server(const CliContext& ctx,
 
 namespace cli {
 
-int serial_server(CliContext&,
+int serial_server(const CliContext&,
                   esphome::api::SyncClient&,
                   std::uint32_t,
                   const esphome::api::SerialProxyConfig&,

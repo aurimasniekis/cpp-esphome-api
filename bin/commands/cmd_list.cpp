@@ -1,0 +1,60 @@
+#include <esphome/api/exception.hpp>
+#include <esphome/api/sync_client.hpp>
+
+#include "commands/commands.hpp"
+#include "commands/domains.hpp"
+#include "io/json_model.hpp"
+#include "io/yaml_emit.hpp"
+#include "net/connection.hpp"
+
+#include <algorithm>
+#include <chrono>
+#include <ostream>
+
+namespace cli {
+
+int cmd_list(CliContext& ctx, const std::string& host) {
+    const esphome::api::ClientOptions opt = resolve_options(ctx, host);
+    esphome::api::SyncClient client(opt);
+    client.set_request_timeout(std::chrono::milliseconds(ctx.request_timeout_ms()));
+
+    try {
+        client.connect();
+    } catch (const std::exception& e) {
+        return report_connect_error(ctx, host, e);
+    }
+
+    const esphome::api::DeviceInfo info = client.device_info();
+    persist_connection(ctx, host, opt, info.name);
+
+    client.list_entities();
+    client.subscribe_states();
+    try {
+        client.pump_until([] { return false; }, std::chrono::milliseconds(1200));
+    } catch (const esphome::api::TimeoutError&) {}
+
+    auto stored = client.store().entities();
+    // Sorted by a stable key (type, object_id) → deterministic order.
+    // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
+    std::sort(stored.begin(), stored.end(), [](const auto* a, const auto* b) {
+        if (a->type != b->type)
+            return static_cast<int>(a->type) < static_cast<int>(b->type);
+        return a->object_id < b->object_id;
+    });
+
+    nlohmann::json view = nlohmann::json::object();
+    for (const auto* e : stored)
+        view[type_to_domain(e->type) + "." + e->object_id] = entity_detail(client.store(), *e);
+
+    ctx.out.emit(view, [&](std::ostream& os) {
+        if (view.empty())
+            os << "no entities on this device\n";
+        else
+            os << to_yaml(view) << "\n";
+    });
+
+    client.disconnect();
+    return 0;
+}
+
+}  // namespace cli

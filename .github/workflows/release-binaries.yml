@@ -22,9 +22,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # Build on the oldest supported runner image so the released binaries
+          # keep a low glibc baseline (22.04 ships glibc 2.35); building on
+          # ubuntu-latest (24.04, glibc 2.39) bakes in GLIBC_2.36+ symbols that
+          # fail to run on older servers.
+          - os: ubuntu-22.04
             target: linux-x86_64
-          - os: ubuntu-24.04-arm
+          - os: ubuntu-22.04-arm
             target: linux-arm64
           - os: macos-15-intel
             target: macos-x86_64

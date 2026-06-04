@@ -3,16 +3,14 @@ include(FetchContent)
 
 # esphome-api-client dependencies, all wired through FetchContent. Where a system
 # package is available it is preferred (FIND_PACKAGE_ARGS) so that install/export
-# can be re-enabled and clean-build time stays low.
+# stays available and clean-build time stays low.
 #
 #   asio      -> header-only; hand-made INTERFACE target esphome_api_asio
 #   gtest     -> GTest::gtest_main (gated by ESPHOME_API_BUILD_TESTS)
 #
-# The proto layer is self-contained (see cmake/ProtoGen.cmake): a build-time C++
-# generator emits the message classes + a static id<->type table, so there is no
-# protobuf / abseil dependency to fetch or link. The Noise crypto primitives are
-# likewise self-contained (vendored, public-domain code under src/crypto/detail/,
-# wired in CMakeLists.txt) — there is no libsodium to fetch or link.
+# The proto layer (cmake/ProtoGen.cmake) and the Noise crypto (src/crypto/detail/,
+# wired in CMakeLists.txt) are both in-tree, so the only thing fetched for the
+# library itself is Asio.
 
 # ---------------------------------------------------------------------------
 # 1. Asio (standalone). No CMake package — build a hand-made INTERFACE target.

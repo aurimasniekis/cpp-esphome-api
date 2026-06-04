@@ -4,10 +4,10 @@
 /// @brief Self-contained proto3 wire-format primitives (varint / zigzag /
 ///        fixed32 / fixed64 / length-delimited), with a writer and a reader.
 ///
-/// This replaces Google protobuf's runtime. The encoding produced here is
-/// byte-for-byte identical to `protoc`-generated C++ for the proto3 subset the
+/// The encoding produced here is standard proto3 wire format for the subset the
 /// ESPHome native API uses (scalars, string, bytes, enums, repeated, packed,
-/// and flat sub-messages). The contract is enforced by the golden test.
+/// and flat sub-messages). The contract is enforced byte-for-byte by the golden
+/// test.
 
 #include <array>
 #include <cstddef>

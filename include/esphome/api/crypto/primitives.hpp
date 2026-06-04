@@ -2,10 +2,9 @@
 
 /// @file
 /// @brief Noise cryptographic primitives (SHA-256, HMAC, HKDF, X25519, ChaCha20-
-///        Poly1305, base64). The implementation (src/crypto/primitives.cpp) is
-///        self-contained — it wraps vendored, public-domain reference code under
-///        src/crypto/detail/ plus the OS CSPRNG, with no external crypto library.
-///        Built only when ESPHOME_API_WITH_NOISE is on.
+///        Poly1305, base64). The implementation (src/crypto/primitives.cpp)
+///        wraps vendored, public-domain reference code under src/crypto/detail/
+///        plus the OS CSPRNG. Built only when ESPHOME_API_WITH_NOISE is on.
 
 #include <esphome/api/bytes.hpp>
 
@@ -22,10 +21,6 @@ using Hash = std::array<std::uint8_t, hash_len>;
 using SymmetricKey = std::array<std::uint8_t, key_len>;
 using PublicKey = std::array<std::uint8_t, key_len>;
 using PrivateKey = std::array<std::uint8_t, key_len>;
-
-/// Initialize the crypto backend. A no-op now that the implementation is
-/// self-contained; retained for API/ABI stability. Idempotent, thread-safe.
-void ensure_init();
 
 /// SHA-256 of `data`.
 Hash sha256(ByteView data);

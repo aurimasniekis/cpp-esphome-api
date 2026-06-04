@@ -203,17 +203,12 @@ if(ESPHOME_API_BUILD_DOCS)
 endif()
 
 # ---------------------------------------------------------------------------
-# Install / export. The proto layer and the Noise crypto are both self-contained
-# (no dependency fetched from source reaches the installed library), so export
-# is always available.
+# Install / export. The library and all of its build-time helpers are in-tree,
+# so the only runtime dependency the installed package declares is Threads.
 # ---------------------------------------------------------------------------
 if(ESPHOME_API_INSTALL)
     include(GNUInstallDirs)
     include(CMakePackageConfigHelpers)
-
-    # The Noise crypto is fully in-tree; the installed package needs no external
-    # crypto dependency. (Placeholder expands to nothing in the generated config.)
-    set(ESPHOME_API_CONFIG_NOISE_DEP "")
 
     # esphome-api-client (a static lib by default) links these in-tree helper
     # targets, so they are part of its link closure and must travel in the same

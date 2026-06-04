@@ -12,7 +12,7 @@ namespace esphome::api::noise {
 
 namespace {
 
-// AEAD (IETF ChaCha20-Poly1305) parameters, formerly libsodium macros.
+// AEAD (IETF ChaCha20-Poly1305) parameters.
 constexpr std::size_t aead_tag_len = detail::chacha20poly1305_tag_len;      // 16
 constexpr std::size_t aead_nonce_len = detail::chacha20poly1305_nonce_len;  // 12
 
@@ -46,10 +46,6 @@ int base64_value(const char c) {
 }
 
 }  // namespace
-
-void ensure_init() {
-    // No external library to initialize; kept for API/ABI stability.
-}
 
 Hash sha256(const ByteView data) {
     Hash out{};

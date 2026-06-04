@@ -1,6 +1,6 @@
 include_guard(GLOBAL)
 
-# Proto pipeline (self-contained — no protoc, no libprotobuf, no abseil):
+# Proto pipeline — an in-tree build-time code generator:
 #
 #   1. Build the host tool `esphome_api_protogen` from tools/protogen/*.cpp.
 #      It links only the C++ stdlib.
@@ -69,8 +69,8 @@ add_dependencies(esphome_api_message_id esphome_api_generate)
 # ---------------------------------------------------------------------------
 # 3. Compile the generated sources into the proto static lib.
 #
-# The generated TU is large and follows protoc's accessor patterns; it is NOT
-# subjected to our strict warnings / clang-tidy. Its include dir is exported
+# The generated TU is large and uses generator-style accessor patterns; it is
+# NOT subjected to our strict warnings / clang-tidy. Its include dir is exported
 # SYSTEM so consumers that pull in api.pb.h do not inherit any warnings either.
 # ---------------------------------------------------------------------------
 add_library(esphome_api_proto STATIC

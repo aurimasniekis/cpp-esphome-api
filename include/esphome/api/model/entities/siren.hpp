@@ -5,7 +5,7 @@
 
 #include <esphome/api/model/entity.hpp>
 #include <esphome/api/model/enums.hpp>
-#include <esphome/api/proto/proto_fwd.hpp>
+#include <esphome/api/proto/proto_message.hpp>
 
 #include <cstdint>
 #include <memory>

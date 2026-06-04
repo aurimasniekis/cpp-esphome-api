@@ -143,9 +143,9 @@ target_link_libraries(my_app PRIVATE esphome::api)
 - **Threads:** the system threads library (linked publicly).
 - **Proto layer:** self-contained — a build-time C++ generator (`tools/protogen`) parses the vendored
   `proto/*.proto` and emits the message classes, enums, and id↔type table.
-- **Noise crypto:** self-contained — the Noise primitives (SHA-256, ChaCha20-Poly1305, X25519) are
+- **Noise crypto:** in-tree — the Noise primitives (SHA-256, ChaCha20-Poly1305, X25519) are
   vendored, public-domain reference implementations under `src/crypto/detail/`, paired with the OS
-  CSPRNG. There is no external crypto library to fetch or link.
+  CSPRNG.
 - **Asio:** fetched automatically via CMake `FetchContent`. It is a *private* dependency — it never
   appears in the public headers, so consumers do not need to find or link it.
 - **Encryption (optional):** Noise support is controlled by `ESPHOME_API_WITH_NOISE` (default `ON`).
@@ -474,7 +474,7 @@ CMake options use the `ESPHOME_API_` prefix: `WITH_NOISE` (default ON), `BUILD_T
 
 Seven layers, each depending only on those below:
 
-1. **Transport + crypto** — Asio `TcpTransport`; self-contained in-tree Noise primitives / handshake (vendored, public-domain crypto — no external library).
+1. **Transport + crypto** — Asio `TcpTransport`; in-tree Noise primitives / handshake (vendored, public-domain crypto).
 2. **Frame layer** — `PlaintextFrameHelper` / `NoiseFrameHelper` (reassembly + framing).
 3. **Codec + registry** — a hand-rolled proto3 wire codec; `MessageRegistry` maps message id ↔ type via a static generated table (no runtime reflection).
 4. **Connection** — explicit state machine: handshake, dispatch, keepalive.
@@ -484,16 +484,16 @@ Seven layers, each depending only on those below:
 
 The proto schema (`proto/api.proto`) is vendored from ESPHome. At build time the `tools/protogen` C++
 generator parses it and emits the message classes, enums, the `MessageId` enum, and the id↔type
-registry table — a self-contained replacement for `protoc` + `libprotobuf`. The generated wire format is byte-for-byte identical to protoc's, verified by a golden
-test (`tests/test_wire_golden.cpp`) against captured protoc output.
+registry table. The generated code produces standard protobuf wire format, verified byte-for-byte by a
+golden test (`tests/test_wire_golden.cpp`).
 
 ---
 
 ## FAQ
 
 **Do I need to link Asio or a crypto library myself?**
-No. Asio is a private dependency hidden behind the public API, and the Noise crypto is self-contained
-in-tree (no libsodium or other external crypto library). Link only `esphome::api`.
+No. Asio is a private dependency hidden behind the public API, and the Noise crypto is in-tree. Link
+only `esphome::api`.
 
 **Is it header-only?**
 No. It is a compiled static (or shared, with `ESPHOME_API_BUILD_SHARED`) library.

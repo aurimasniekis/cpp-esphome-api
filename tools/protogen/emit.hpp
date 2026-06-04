@@ -11,8 +11,9 @@
 
 namespace protogen {
 
-// Append "_" to C++ keywords (e.g. proto message "void" -> "void_"), matching
-// protoc's name mangling. Other names already C++-safe in the vendored proto.
+// Append "_" to C++ keywords (e.g. proto message "void" -> "void_"), following
+// the standard proto -> C++ name mangling. Other names are already C++-safe in
+// the vendored proto.
 std::string cpp_ident(const std::string& name);
 
 // C++ element type for a field (the scalar / enum / message type, ignoring

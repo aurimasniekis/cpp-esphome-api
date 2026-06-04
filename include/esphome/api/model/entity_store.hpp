@@ -32,7 +32,7 @@
 #include <esphome/api/model/entities/water_heater.hpp>
 #include <esphome/api/model/entity.hpp>
 #include <esphome/api/model/entity_type.hpp>
-#include <esphome/api/proto/proto_fwd.hpp>
+#include <esphome/api/proto/proto_message.hpp>
 
 #include <cstdint>
 #include <functional>

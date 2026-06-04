@@ -14,7 +14,6 @@ ByteView view_of(const std::array<std::uint8_t, N>& k) {
 }  // namespace
 
 void NoiseHandshake::initialize(const Role role, const SymmetricKey& psk, const ByteView prologue) {
-    ensure_init();
     role_ = role;
     psk_ = psk;
     have_ephemeral_ = false;

@@ -1,16 +1,16 @@
 // Byte-exactness oracle for the hand-rolled wire codec.
 //
-// golden_vectors.inc holds protoc-serialized bytes for every message that
-// carries an (id), captured (once, while protobuf was still in the tree) from
-// deterministic non-default field values. For each vector we:
+// golden_vectors.inc holds reference proto3-serialized bytes for every message
+// that carries an (id), produced from deterministic non-default field values.
+// For each vector we:
 //   1. create the message by id via the registry,
-//   2. decode the protoc bytes with our codec,
+//   2. decode the reference bytes with our codec,
 //   3. assert calculate_size() equals the byte length, and
-//   4. assert re-encoding reproduces the protoc bytes byte-for-byte.
+//   4. assert re-encoding reproduces the reference bytes byte-for-byte.
 //
-// (2)+(4) together prove our decoder accepts protoc's wire format and our
-// encoder reproduces it exactly — the contract that lets us talk to real
-// ESPHome devices without protobuf.
+// (2)+(4) together prove our decoder accepts standard proto3 wire format and our
+// encoder reproduces it exactly — the contract that lets us talk to real ESPHome
+// devices.
 
 #include <esphome/api/proto/message_registry.hpp>
 

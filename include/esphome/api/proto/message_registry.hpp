@@ -4,7 +4,7 @@
 /// @brief Bidirectional registry mapping ESPHome message ids to message types.
 
 #include <esphome/api/proto/message_id.hpp>
-#include <esphome/api/proto/proto_fwd.hpp>
+#include <esphome/api/proto/proto_message.hpp>
 
 #include <cstddef>
 #include <cstdint>

@@ -9,7 +9,7 @@
 #include <esphome/api/client_options.hpp>
 #include <esphome/api/connection/connection.hpp>
 #include <esphome/api/connection/connection_state.hpp>
-#include <esphome/api/proto/proto_fwd.hpp>
+#include <esphome/api/proto/proto_message.hpp>
 
 #include <chrono>
 #include <cstddef>

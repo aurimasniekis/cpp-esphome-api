@@ -1,14 +1,13 @@
 #pragma once
 
 /// @file
-/// @brief Base class for every generated ESPHome API message — the lightweight
-///        replacement for `google::protobuf::Message`.
+/// @brief Lightweight base class for every generated ESPHome API message.
 ///
 /// Generated message classes (see the build-time `protogen` output
 /// `api_messages.hpp`) derive from ProtoMessage and implement the wire
-/// primitives. The compat wrappers (`ByteSizeLong`, `SerializeToArray`,
-/// `ParseFromArray`, `SerializeAsString`) keep the few protobuf-shaped call
-/// sites in connection.cpp / loopback_server.hpp unchanged.
+/// primitives. The convenience wrappers (`ByteSizeLong`, `SerializeToArray`,
+/// `ParseFromArray`, `SerializeAsString`) expose protobuf-style method names for
+/// the call sites in connection.cpp / loopback_server.hpp.
 
 #include <esphome/api/proto/wire.hpp>
 

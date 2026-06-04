@@ -9,7 +9,7 @@
 #include <esphome/api/connection/connection_options.hpp>
 #include <esphome/api/connection/connection_state.hpp>
 #include <esphome/api/frame/frame_helper.hpp>
-#include <esphome/api/proto/proto_fwd.hpp>
+#include <esphome/api/proto/proto_message.hpp>
 #include <esphome/api/transport/executor.hpp>
 #include <esphome/api/transport/transport.hpp>
 

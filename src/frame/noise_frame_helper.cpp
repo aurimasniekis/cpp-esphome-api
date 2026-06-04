@@ -25,7 +25,6 @@ void append_u16(ByteBuffer& out, const std::size_t value) {
 
 NoiseFrameHelper::NoiseFrameHelper(const NoiseConfig& config)
     : expected_name_(config.expected_name) {
-    noise::ensure_init();
     ByteBuffer decoded;
     if (!noise::base64_decode(config.psk_base64, decoded) || decoded.size() != noise::key_len) {
         throw ApiError("invalid Noise PSK: expected base64 of a 32-byte key");

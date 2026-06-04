@@ -7,4 +7,10 @@ find_dependency(Threads)
 
 include("${CMAKE_CURRENT_LIST_DIR}/esphome-api-clientTargets.cmake")
 
+# Match the in-tree alias so consumers can link `esphome::api` whether they use
+# the build tree (add_subdirectory / FetchContent) or this installed package.
+if(NOT TARGET esphome::api)
+    add_library(esphome::api ALIAS esphome::esphome-api-client)
+endif()
+
 check_required_components(esphome-api-client)

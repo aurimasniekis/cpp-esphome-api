@@ -43,8 +43,6 @@ IncludeCategories:
     Priority:        2
   - Regex:           '^<asio/.*>'
     Priority:        2
-  - Regex:           '^<sodium.*>'
-    Priority:        2
   - Regex:           '^<[a-z_]+>'
     Priority:        4
   - Regex:           '^<.*\.h>'

@@ -80,11 +80,14 @@ add_dependencies(esphome_api_proto esphome_api_generate)
 
 # Public include: generated/include holds <esphome/api/proto/...> headers; the
 # proto-subdir entry resolves the bare `#include "api.pb.h"` in consumer TUs.
+# Wrapped in BUILD_INTERFACE so these build-tree paths do not leak into the
+# installed export; the installed package ships the generated + committed headers
+# under the main target's INSTALL_INTERFACE include dir.
 target_include_directories(esphome_api_proto SYSTEM PUBLIC
-    "${ESPHOME_API_GENERATED_DIR}/include"
-    "${_esphome_api_gen_inc}")
+    "$<BUILD_INTERFACE:${ESPHOME_API_GENERATED_DIR}/include>"
+    "$<BUILD_INTERFACE:${_esphome_api_gen_inc}>")
 # The committed runtime codec (wire.hpp / proto_message.hpp) lives in the normal
 # source include tree.
 target_include_directories(esphome_api_proto SYSTEM PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/include")
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")
 set_target_properties(esphome_api_proto PROPERTIES POSITION_INDEPENDENT_CODE ON)

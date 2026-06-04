@@ -127,8 +127,7 @@ target_link_libraries(my_app PRIVATE esphome::api)
 
 ### Installed package
 
-After `make install` (see [Requirements](#requirements) for the caveat), consumers can use the
-installed CMake package config:
+After `make install`, consumers can use the installed CMake package config:
 
 ```cmake
 find_package(esphome-api-client CONFIG REQUIRED)
@@ -144,9 +143,11 @@ target_link_libraries(my_app PRIVATE esphome::api)
 - **Threads:** the system threads library (linked publicly).
 - **Proto layer:** self-contained — a build-time C++ generator (`tools/protogen`) parses the vendored
   `proto/*.proto` and emits the message classes, enums, and id↔type table.
-- **Asio** and **libsodium:** fetched automatically via CMake `FetchContent`. They are *private*
-  dependencies — they never appear in the public headers, so consumers do not need to find or link
-  them.
+- **Noise crypto:** self-contained — the Noise primitives (SHA-256, ChaCha20-Poly1305, X25519) are
+  vendored, public-domain reference implementations under `src/crypto/detail/`, paired with the OS
+  CSPRNG. There is no external crypto library to fetch or link.
+- **Asio:** fetched automatically via CMake `FetchContent`. It is a *private* dependency — it never
+  appears in the public headers, so consumers do not need to find or link it.
 - **Encryption (optional):** Noise support is controlled by `ESPHOME_API_WITH_NOISE` (default `ON`).
   The public macro `ESPHOME_API_HAS_NOISE` reflects whether it was compiled in, so `config.hpp` and
   your own code can branch on the feature.
@@ -473,7 +474,7 @@ CMake options use the `ESPHOME_API_` prefix: `WITH_NOISE` (default ON), `BUILD_T
 
 Seven layers, each depending only on those below:
 
-1. **Transport + crypto** — Asio `TcpTransport`; pure libsodium-backed Noise primitives / handshake.
+1. **Transport + crypto** — Asio `TcpTransport`; self-contained in-tree Noise primitives / handshake (vendored, public-domain crypto — no external library).
 2. **Frame layer** — `PlaintextFrameHelper` / `NoiseFrameHelper` (reassembly + framing).
 3. **Codec + registry** — a hand-rolled proto3 wire codec; `MessageRegistry` maps message id ↔ type via a static generated table (no runtime reflection).
 4. **Connection** — explicit state machine: handshake, dispatch, keepalive.
@@ -490,8 +491,9 @@ test (`tests/test_wire_golden.cpp`) against captured protoc output.
 
 ## FAQ
 
-**Do I need to link Asio or libsodium myself?**
-No. They are private dependencies hidden behind the public API. Link only `esphome::api`.
+**Do I need to link Asio or a crypto library myself?**
+No. Asio is a private dependency hidden behind the public API, and the Noise crypto is self-contained
+in-tree (no libsodium or other external crypto library). Link only `esphome::api`.
 
 **Is it header-only?**
 No. It is a compiled static (or shared, with `ESPHOME_API_BUILD_SHARED`) library.

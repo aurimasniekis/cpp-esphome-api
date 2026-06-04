@@ -32,7 +32,7 @@ option(ESPHOME_API_ENABLE_CLANG_TIDY "Run clang-tidy during build"      OFF)
 option(ESPHOME_API_ENABLE_SANITIZERS "Build with ASan + UBSan (Debug)"  OFF)
 option(ESPHOME_API_ENABLE_COVERAGE  "Build with Clang source-based coverage" OFF)
 option(ESPHOME_API_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ${PROJECT_IS_TOP_LEVEL})
-option(ESPHOME_API_WITH_NOISE       "Enable Noise (encrypted) transport via libsodium" ON)
+option(ESPHOME_API_WITH_NOISE       "Enable Noise (encrypted) transport (self-contained in-tree crypto)" ON)
 option(ESPHOME_API_BUILD_SHARED     "Build esphome-api-client as a shared library" OFF)
 option(ESPHOME_API_BUILD_CLI        "Build the esphome-cli command-line tool" ${PROJECT_IS_TOP_LEVEL})
 
@@ -132,9 +132,30 @@ if(ESPHOME_API_WITH_NOISE)
     # PUBLIC so config.hpp::noise_supported and consumer code (examples, tests)
     # observe the same feature flag the library was built with.
     target_compile_definitions(esphome-api-client PUBLIC ESPHOME_API_HAS_NOISE=1)
-    if(TARGET esphome::sodium)
-        target_link_libraries(esphome-api-client PRIVATE esphome::sodium)
+
+    # Vendored, public-domain crypto primitives (SHA-256, ChaCha20-Poly1305,
+    # X25519) + native CSPRNG. These are reference implementations that do NOT
+    # satisfy our strict warning set / clang-tidy, so — mirroring the proto
+    # object-library precedent (cmake/ProtoGen.cmake) — they are compiled in
+    # their own static library with strict warnings and clang-tidy OFF, and
+    # linked PRIVATE. The strict-warning wrapper (src/crypto/primitives.cpp)
+    # stays in the main target and includes only the prototype headers.
+    add_library(esphome_api_crypto STATIC
+        src/crypto/detail/sha256.cpp
+        src/crypto/detail/chacha20poly1305.cpp
+        src/crypto/detail/x25519.cpp
+        src/crypto/detail/random.cpp
+    )
+    target_compile_features(esphome_api_crypto PRIVATE cxx_std_17)
+    target_include_directories(esphome_api_crypto PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include")
+    set_target_properties(esphome_api_crypto PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    # random.cpp uses BCryptGenRandom on Windows.
+    if(WIN32)
+        target_link_libraries(esphome_api_crypto PRIVATE bcrypt)
     endif()
+
+    target_link_libraries(esphome-api-client PRIVATE esphome_api_crypto)
 endif()
 
 esphome_api_set_warnings(esphome-api-client PRIVATE)
@@ -182,27 +203,37 @@ if(ESPHOME_API_BUILD_DOCS)
 endif()
 
 # ---------------------------------------------------------------------------
-# Install / export — only possible when no dependency was fetched from source.
-# The proto layer is self-contained now, so only a fetched libsodium (Noise)
-# blocks export.
+# Install / export. The proto layer and the Noise crypto are both self-contained
+# (no dependency fetched from source reaches the installed library), so export
+# is always available.
 # ---------------------------------------------------------------------------
-if(ESPHOME_API_INSTALL AND (DEFINED Sodium_SOURCE_DIR OR DEFINED sodium_SOURCE_DIR))
-    message(STATUS
-        "esphome-api-client: ESPHOME_API_INSTALL disabled — libsodium was fetched "
-        "from source and cannot be re-exported. Provide system libsodium "
-        "(find_package) to re-enable install rules.")
-    set(ESPHOME_API_INSTALL OFF)
-endif()
-
 if(ESPHOME_API_INSTALL)
     include(GNUInstallDirs)
     include(CMakePackageConfigHelpers)
 
-    if(ESPHOME_API_WITH_NOISE)
-        set(ESPHOME_API_CONFIG_NOISE_DEP "find_dependency(unofficial-sodium)")
-    else()
-        set(ESPHOME_API_CONFIG_NOISE_DEP "")
+    # The Noise crypto is fully in-tree; the installed package needs no external
+    # crypto dependency. (Placeholder expands to nothing in the generated config.)
+    set(ESPHOME_API_CONFIG_NOISE_DEP "")
+
+    # esphome-api-client (a static lib by default) links these in-tree helper
+    # targets, so they are part of its link closure and must travel in the same
+    # export set. Their interface include dirs are BUILD_INTERFACE-wrapped, so the
+    # installed targets carry no build-tree paths; consumers get every public
+    # header through the main target's INSTALL_INTERFACE include dir below.
+    #   esphome_api_asio   — header-only INTERFACE (PRIVATE, build-only)
+    #   esphome_api_proto  — generated message classes (PUBLIC)
+    #   esphome_api_crypto — vendored Noise crypto (PRIVATE; Noise builds only)
+    set(_esphome_api_export_aux esphome_api_asio)
+    if(TARGET esphome_api_proto)
+        list(APPEND _esphome_api_export_aux esphome_api_proto)
     endif()
+    if(TARGET esphome_api_crypto)
+        list(APPEND _esphome_api_export_aux esphome_api_crypto)
+    endif()
+    install(TARGETS ${_esphome_api_export_aux}
+        EXPORT  esphome-api-clientTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
 
     install(TARGETS esphome-api-client
         EXPORT  esphome-api-clientTargets

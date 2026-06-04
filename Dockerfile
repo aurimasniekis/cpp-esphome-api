@@ -2,8 +2,9 @@
 
 # ---------------------------------------------------------------------------
 # Build stage — Alpine (musl). The build needs only a C++17 compiler and CMake;
-# Asio, libsodium, CLI11, spdlog and nlohmann/json are fetched + built from
-# source. The CLI is linked fully static against musl, so it has no runtime
+# Asio, CLI11, spdlog and nlohmann/json are fetched + built from source (the
+# Noise crypto is self-contained in-tree). The CLI is linked fully static
+# against musl, so it has no runtime
 # library dependencies and runs on a distroless-static / scratch base. The
 # whole builder image is discarded.
 # ---------------------------------------------------------------------------

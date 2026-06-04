@@ -6,12 +6,13 @@ include(FetchContent)
 # can be re-enabled and clean-build time stays low.
 #
 #   asio      -> header-only; hand-made INTERFACE target esphome_api_asio
-#   libsodium -> target `sodium` (gated by ESPHOME_API_WITH_NOISE)
 #   gtest     -> GTest::gtest_main (gated by ESPHOME_API_BUILD_TESTS)
 #
 # The proto layer is self-contained (see cmake/ProtoGen.cmake): a build-time C++
 # generator emits the message classes + a static id<->type table, so there is no
-# protobuf / abseil dependency to fetch or link.
+# protobuf / abseil dependency to fetch or link. The Noise crypto primitives are
+# likewise self-contained (vendored, public-domain code under src/crypto/detail/,
+# wired in CMakeLists.txt) — there is no libsodium to fetch or link.
 
 # ---------------------------------------------------------------------------
 # 1. Asio (standalone). No CMake package — build a hand-made INTERFACE target.
@@ -27,8 +28,10 @@ FetchContent_MakeAvailable(asio)
 
 if(NOT TARGET esphome_api_asio)
     add_library(esphome_api_asio INTERFACE)
+    # BUILD_INTERFACE-wrapped: Asio is a PRIVATE, build-only (header-only) dep, so
+    # the path must not leak into the installed export.
     target_include_directories(esphome_api_asio SYSTEM INTERFACE
-        "${asio_SOURCE_DIR}/asio/include")
+        "$<BUILD_INTERFACE:${asio_SOURCE_DIR}/asio/include>")
     target_compile_definitions(esphome_api_asio INTERFACE
         ASIO_STANDALONE
         ASIO_NO_DEPRECATED)
@@ -36,31 +39,7 @@ if(NOT TARGET esphome_api_asio)
 endif()
 
 # ---------------------------------------------------------------------------
-# 3. libsodium (via robinlinden/libsodium-cmake) — Noise crypto primitives.
-#    Provides target `sodium`. Only needed when Noise support is enabled.
-# ---------------------------------------------------------------------------
-if(ESPHOME_API_WITH_NOISE)
-    set(SODIUM_DISABLE_TESTS ON CACHE INTERNAL "")
-    set(SODIUM_MINIMAL       ON CACHE INTERNAL "")
-    FetchContent_Declare(
-        Sodium
-        GIT_REPOSITORY https://github.com/robinlinden/libsodium-cmake.git
-        GIT_TAG        9b2848dfc1b917a9410f0de9d81059b26cbfaa8d
-    )
-    FetchContent_MakeAvailable(Sodium)
-
-    if(DEFINED sodium_SOURCE_DIR OR DEFINED Sodium_SOURCE_DIR)
-        set(ESPHOME_API_SODIUM_FETCHED TRUE CACHE INTERNAL "")
-    endif()
-
-    # Normalise the target name to `esphome::sodium` for internal linking.
-    if(TARGET sodium AND NOT TARGET esphome::sodium)
-        add_library(esphome::sodium ALIAS sodium)
-    endif()
-endif()
-
-# ---------------------------------------------------------------------------
-# 4. GoogleTest — tests only.
+# 2. GoogleTest — tests only.
 # ---------------------------------------------------------------------------
 if(ESPHOME_API_BUILD_TESTS)
     set(INSTALL_GTEST OFF CACHE INTERNAL "")
@@ -76,10 +55,9 @@ if(ESPHOME_API_BUILD_TESTS)
 endif()
 
 # ---------------------------------------------------------------------------
-# 5. esphome-cli tool dependencies — CLI11 (arg parsing), spdlog (the CLI's own
+# 3. esphome-cli tool dependencies — CLI11 (arg parsing), spdlog (the CLI's own
 #    logging) and nlohmann_json (JSON). These are PRIVATE to the bin/ target and
-#    never reach the library, so they do not affect ESPHOME_API_INSTALL (which is
-#    only disabled when protobuf/abseil/sodium are fetched from source).
+#    never reach the library, so they do not affect ESPHOME_API_INSTALL.
 # ---------------------------------------------------------------------------
 if(ESPHOME_API_BUILD_CLI)
     set(CLI11_BUILD_TESTS    OFF CACHE INTERNAL "")

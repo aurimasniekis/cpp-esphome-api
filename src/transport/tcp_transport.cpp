@@ -18,23 +18,36 @@ bool TcpTransport::is_open() const {
 void TcpTransport::async_connect(const std::string& host,
                                  const std::uint16_t port,
                                  ConnectHandler handler) {
-    resolver_.async_resolve(host,
-                            std::to_string(port),
-                            [this, handler = std::move(handler)](
-                                const std::error_code ec,
-                                const asio::ip::tcp::resolver::results_type& results) mutable {
-                                if (ec) {
-                                    handler(ec);
-                                    return;
-                                }
-                                asio::async_connect(
-                                    socket_,
-                                    results,
-                                    [handler = std::move(handler)](const std::error_code connect_ec,
-                                                                   const asio::ip::tcp::endpoint&) {
-                                        handler(connect_ec);
-                                    });
-                            });
+    resolver_.async_resolve(
+        host,
+        std::to_string(port),
+        [this, handler = std::move(handler)](
+            const std::error_code ec,
+            const asio::ip::tcp::resolver::results_type& results) mutable {
+            if (ec) {
+                handler(ec);
+                return;
+            }
+            asio::async_connect(
+                socket_,
+                results,
+                [this, handler = std::move(handler)](const std::error_code connect_ec,
+                                                     const asio::ip::tcp::endpoint&) {
+                    if (!connect_ec) {
+                        // The ESPHome native API is a stream of many tiny
+                        // frames (the Noise handshake alone is several
+                        // round-trips). Leaving Nagle's algorithm enabled lets
+                        // it coalesce these and interact badly with delayed-ACK
+                        // — pronounced on Windows, whose delayed-ACK timer can
+                        // stall each frame ~200ms — causing handshake flakiness
+                        // and laggy state updates. Disable it like aioesphomeapi
+                        // and the firmware do. Best-effort: ignore failures.
+                        std::error_code ignored;
+                        socket_.set_option(asio::ip::tcp::no_delay(true), ignored);
+                    }
+                    handler(connect_ec);
+                });
+        });
 }
 
 void TcpTransport::start_read(ReadHandler on_read) {

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(esphome-api-client
-    VERSION     0.3.0
+    VERSION     0.4.0
     DESCRIPTION "Modern C++17 client for the ESPHome native API (plaintext + Noise)"
     LANGUAGES   CXX
 )

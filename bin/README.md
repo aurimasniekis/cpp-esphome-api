@@ -37,10 +37,10 @@ packages for `x86_64` and `arm64`. Download the one for your distro and architec
 
 ```sh
 # Debian / Ubuntu
-sudo apt install ./esphome-cli_0.3.0_amd64.deb
+sudo apt install ./esphome-cli_0.4.0_amd64.deb
 
 # Fedora / RHEL / openSUSE
-sudo rpm -i esphome-cli-0.3.0-1.x86_64.rpm
+sudo rpm -i esphome-cli-0.4.0-1.x86_64.rpm
 ```
 
 The package installs `esphome-cli` to `/usr/bin`.

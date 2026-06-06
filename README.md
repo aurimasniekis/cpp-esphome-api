@@ -104,7 +104,7 @@ include(FetchContent)
 FetchContent_Declare(
     esphome-api
     URL      https://github.com/aurimasniekis/cpp-esphome-api/archive/refs/tags/v0.5.0.tar.gz
-    URL_HASH SHA256=0000000000000000000000000000000000000000000000000000000000000000
+    URL_HASH SHA256=7f90087bed99a49d6bba6087d3cd2227b4098c73065514db062dbd88cce3675e
 )
 FetchContent_MakeAvailable(esphome-api)
 

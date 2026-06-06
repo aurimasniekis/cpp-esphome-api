@@ -1,3 +1,10 @@
+// MSVC flags std::getenv (used by the opt-in loop heartbeat trace) as C4996;
+// it is a portable standard function. Silence it for this translation unit.
+// Must precede any include that pulls in <cstdlib>.
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS 1
+#endif
+
 #include <esphome/api/client.hpp>
 #include <esphome/api/exception.hpp>
 #include <esphome/api/frame/plaintext_frame_helper.hpp>
@@ -22,6 +29,9 @@
 #include "transport/tcp_transport.hpp"
 #include <asio.hpp>
 
+#include <chrono>
+#include <cstdlib>
+#include <iostream>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -50,6 +60,37 @@ struct Client::Impl {
                 handler(msg);
             }
         });
+
+        // Opt-in: start the event-loop heartbeat (see arm_heartbeat).
+        if (std::getenv("ESPHOME_API_TRACE_LOOP") != nullptr) {
+            heartbeat = std::make_unique<asio::steady_timer>(io);
+            arm_heartbeat();
+        }
+    }
+
+    // Opt-in loop heartbeat (set ESPHOME_API_TRACE_LOOP=1). A 100ms timer that
+    // re-arms itself and logs its *actual* firing interval to stderr. If the
+    // io_context loop is healthy the delta stays ~100ms even while updates lag;
+    // if the delta spikes to seconds the loop itself is frozen (a handler is
+    // blocking, or the loop isn't being pumped). Pair it with ESPHOME_API_TRACE_IO:
+    // heartbeat steady + IO wait high => data isn't arriving (below asio).
+    void arm_heartbeat() {
+        heartbeat->expires_after(std::chrono::milliseconds(100));
+        heartbeat->async_wait([this](const std::error_code ec) {
+            if (ec) {
+                return;
+            }
+            const auto now = std::chrono::steady_clock::now();
+            if (heartbeat_last.time_since_epoch().count() != 0) {
+                std::cerr << "[esphome-loop] heartbeat delta="
+                          << std::chrono::duration_cast<std::chrono::milliseconds>(now -
+                                                                                   heartbeat_last)
+                                 .count()
+                          << "ms\n";
+            }
+            heartbeat_last = now;
+            arm_heartbeat();
+        });
     }
 
     std::unique_ptr<FrameHelper> make_frame_helper() const {
@@ -76,6 +117,10 @@ struct Client::Impl {
     DeviceInfo device_info;
     bool device_info_loaded = false;
     std::vector<MessageHandler> any_handlers;
+
+    // Opt-in event-loop heartbeat (ESPHOME_API_TRACE_LOOP); null unless enabled.
+    std::unique_ptr<asio::steady_timer> heartbeat;
+    std::chrono::steady_clock::time_point heartbeat_last;  // zero until first beat
 
     // Subsystems, created on first access.
     std::unique_ptr<BluetoothProxy> bluetooth;

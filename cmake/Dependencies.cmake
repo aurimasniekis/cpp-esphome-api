@@ -24,6 +24,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(asio)
 
+# Some Windows network drivers (notably USB-Ethernet adapters) batch overlapped-IO
+# completions: packets arrive on time (confirmed on the wire) but Asio's IOCP
+# receive path is only completed in multi-second bursts, stalling state updates.
+# Asio's select reactor reads the same data promptly — which is also why Linux
+# (epoll) and macOS (kqueue) never exhibited it. Default Windows to the select
+# reactor. Trade-off: select is less scalable than IOCP at very high connection
+# counts — irrelevant for typical client use (a handful of devices). Turn OFF to
+# restore IOCP. Asio is PRIVATE to the library, so this never reaches consumers.
+option(ESPHOME_API_WIN_DISABLE_IOCP
+    "On Windows, use Asio's select reactor instead of IOCP (works around USB-Ethernet/driver overlapped-completion batching)"
+    ON)
+
 if(NOT TARGET esphome_api_asio)
     add_library(esphome_api_asio INTERFACE)
     # BUILD_INTERFACE-wrapped: Asio is a PRIVATE, build-only (header-only) dep, so
@@ -32,7 +44,8 @@ if(NOT TARGET esphome_api_asio)
         "$<BUILD_INTERFACE:${asio_SOURCE_DIR}/asio/include>")
     target_compile_definitions(esphome_api_asio INTERFACE
         ASIO_STANDALONE
-        ASIO_NO_DEPRECATED)
+        ASIO_NO_DEPRECATED
+        $<$<AND:$<BOOL:${WIN32}>,$<BOOL:${ESPHOME_API_WIN_DISABLE_IOCP}>>:ASIO_DISABLE_IOCP>)
     target_link_libraries(esphome_api_asio INTERFACE Threads::Threads)
 endif()
 
